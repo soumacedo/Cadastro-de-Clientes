@@ -1,0 +1,97 @@
+```
+from flask import Flask, render_template, request, redirect, url_for
+import sqlite3
+
+app = Flask(__name__)
+
+@app.before_first_request
+def criar_banco():
+    conn = sqlite3.connect('clientes.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INTEGER PRIMARY KEY,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL,
+            telefone TEXT NOT NULL,
+            endereco TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/cadastro', methods=['GET', 'POST'])
+def cadastro():
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        telefone = request.form['telefone']
+        endereco = request.form['endereco']
+
+        conn = sqlite3.connect('clientes.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO clientes (nome, email, telefone, endereco)
+            VALUES (?, ?, ?, ?)
+        ''', (nome, email, telefone, endereco))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for('lista_clientes'))
+
+    return render_template('cadastro.html')
+
+@app.route('/lista_clientes')
+def lista_clientes():
+    conn = sqlite3.connect('clientes.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clientes')
+    clientes = cursor.fetchall()
+    conn.close()
+
+    return render_template('lista_clientes.html', clientes=clientes)
+
+@app.route('/editar/<int:id>', methods=['GET', 'POST'])
+def editar(id):
+    conn = sqlite3.connect('clientes.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clientes WHERE id = ?', (id,))
+    cliente = cursor.fetchone()
+    conn.close()
+
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        telefone = request.form['telefone']
+        endereco = request.form['endereco']
+
+        conn = sqlite3.connect('clientes.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE clientes SET nome = ?, email = ?, telefone = ?, endereco = ?
+            WHERE id = ?
+        ''', (nome, email, telefone, endereco, id))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for('lista_clientes'))
+
+    return render_template('editar.html', cliente=cliente)
+
+@app.route('/excluir/<int:id>')
+def excluir(id):
+    conn = sqlite3.connect('clientes.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM clientes WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('lista_clientes'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
